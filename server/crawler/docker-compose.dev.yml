@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  scylla:
+    image: scylladb/scylla:5.2
+    container_name: hex-search-scylla
+    ports:
+      - "9042:9042"
+    volumes:
+      - scylla_data:/var/lib/scylla
+    command: --developer-mode 1 --smp 1
+    environment:
+      - SCYLLA_BATCH_SIZE_WARN_THRESHOLD_IN_KB=5120
+      - SCYLLA_BATCH_SIZE_FAIL_THRESHOLD_IN_KB=10240
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: hex-search-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+volumes:
+  scylla_data:
+  redis_data: 

@@ -1,0 +1,197 @@
+version: '3.8'
+
+services:
+  # Frontend application
+  frontend:
+    build:
+      context: ./client
+      target: production
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_API_URL=${API_URL:-http://localhost:3001}
+    depends_on:
+      - query-service
+    networks:
+      - frontend-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Crawler service
+  crawler-service:
+    build:
+      context: ./server/crawler
+      target: production
+    environment:
+      - NODE_ENV=production
+      - SCYLLA_HOSTS=scylla-node1,scylla-node2,scylla-node3
+      - SCYLLA_DATACENTER=${SCYLLA_DATACENTER:-datacenter1}
+      - SCYLLA_KEYSPACE=${SCYLLA_KEYSPACE:-hexsearch}
+      - REDIS_HOST=redis
+      - ETH_RPC_URL=${ETH_RPC_URL}
+      - BTC_RPC_URL=${BTC_RPC_URL}
+      - BTC_RPC_USER=${BTC_RPC_USER}
+      - BTC_RPC_PASSWORD=${BTC_RPC_PASSWORD}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - CRAWLER_INTERVAL=${CRAWLER_INTERVAL:-60000}
+      - CRAWLER_BATCH_SIZE=${CRAWLER_BATCH_SIZE:-100}
+    depends_on:
+      - scylla-node1
+      - scylla-node2
+      - scylla-node3
+      - redis
+    networks:
+      - backend-network
+    restart: unless-stopped
+    volumes:
+      - crawler-logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Query service
+  query-service:
+    build:
+      context: ./server/query
+      target: production
+    ports:
+      - "${API_PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - SCYLLA_HOSTS=scylla-node1,scylla-node2,scylla-node3
+      - SCYLLA_DATACENTER=${SCYLLA_DATACENTER:-datacenter1}
+      - SCYLLA_KEYSPACE=${SCYLLA_KEYSPACE:-hexsearch}
+      - REDIS_HOST=redis
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - API_RATE_LIMIT=${API_RATE_LIMIT:-100}
+      - API_RATE_WINDOW=${API_RATE_WINDOW:-900000}
+    depends_on:
+      - scylla-node1
+      - scylla-node2
+      - scylla-node3
+      - redis
+    networks:
+      - frontend-network
+      - backend-network
+    restart: unless-stopped
+    volumes:
+      - query-logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ScyllaDB cluster
+  scylla-node1:
+    image: scylladb/scylla:5.2
+    container_name: scylla-node1
+    command: >
+      --seeds=scylla-node1,scylla-node2
+      --smp ${SCYLLA_SMP:-2}
+      --memory ${SCYLLA_MEMORY:-4G}
+      --overprovisioned ${SCYLLA_OVERPROVISIONED:-1}
+    ports:
+      - "9042:9042"
+    volumes:
+      - scylla-data1:/var/lib/scylla
+    networks:
+      - backend-network
+    restart: unless-stopped
+    ulimits:
+      memlock: -1
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep -q '^UN'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  scylla-node2:
+    image: scylladb/scylla:5.2
+    container_name: scylla-node2
+    command: >
+      --seeds=scylla-node1,scylla-node2
+      --smp ${SCYLLA_SMP:-2}
+      --memory ${SCYLLA_MEMORY:-4G}
+      --overprovisioned ${SCYLLA_OVERPROVISIONED:-1}
+    volumes:
+      - scylla-data2:/var/lib/scylla
+    networks:
+      - backend-network
+    restart: unless-stopped
+    ulimits:
+      memlock: -1
+    depends_on:
+      - scylla-node1
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep -q '^UN'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  scylla-node3:
+    image: scylladb/scylla:5.2
+    container_name: scylla-node3
+    command: >
+      --seeds=scylla-node1,scylla-node2
+      --smp ${SCYLLA_SMP:-2}
+      --memory ${SCYLLA_MEMORY:-4G}
+      --overprovisioned ${SCYLLA_OVERPROVISIONED:-1}
+    volumes:
+      - scylla-data3:/var/lib/scylla
+    networks:
+      - backend-network
+    restart: unless-stopped
+    ulimits:
+      memlock: -1
+    depends_on:
+      - scylla-node2
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep -q '^UN'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and job queues
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - backend-network
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory ${REDIS_MAXMEMORY:-2gb}
+      --maxmemory-policy ${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+      --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  frontend-network:
+    driver: bridge
+  backend-network:
+    driver: bridge
+
+volumes:
+  scylla-data1:
+  scylla-data2:
+  scylla-data3:
+  redis-data:
+  crawler-logs:
+  query-logs:

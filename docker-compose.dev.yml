@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Frontend development
+  frontend:
+    build:
+      context: ./client
+      target: development
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - REACT_APP_API_URL=http://localhost:3001
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - "3000:3000"
+    networks:
+      - dev-network
+
+  # Crawler service development
+  crawler-service:
+    build:
+      context: ./server/crawler
+      target: development
+    volumes:
+      - ./server/crawler:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - SCYLLA_HOSTS=scylla
+      - SCYLLA_DATACENTER=datacenter1
+      - SCYLLA_KEYSPACE=hexsearch
+      - REDIS_HOST=redis
+      - LOG_LEVEL=debug
+    ports:
+      - "3002:3002"
+      - "9229:9229"  # For debugging
+    command: npm run dev
+    depends_on:
+      - scylla
+      - redis
+    networks:
+      - dev-network
+
+  # Query service development
+  query-service:
+    build:
+      context: ./server/query
+      target: development
+    volumes:
+      - ./server/query:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - SCYLLA_HOSTS=scylla
+      - SCYLLA_DATACENTER=datacenter1
+      - SCYLLA_KEYSPACE=hexsearch
+      - REDIS_HOST=redis
+      - CORS_ORIGIN=http://localhost:3000
+      - LOG_LEVEL=debug
+    ports:
+      - "3001:3001"
+      - "9230:9229"  # For debugging
+    command: npm run dev
+    depends_on:
+      - scylla
+      - redis
+    networks:
+      - dev-network
+
+  # Single ScyllaDB node for development
+  scylla:
+    image: scylladb/scylla:5.2
+    command: --smp 1 --memory 1G --overprovisioned 1 --developer-mode 1
+    ports:
+      - "9042:9042"
+    volumes:
+      - scylla-dev-data:/var/lib/scylla
+    networks:
+      - dev-network
+
+  # Redis for development
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev-data:/data
+    networks:
+      - dev-network
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+
+networks:
+  dev-network:
+
+volumes:
+  scylla-dev-data:
+  redis-dev-data: 
