@@ -1,7 +1,7 @@
 # HexSearch
 
 Blockchain hash search engine - instantly search through Ethereum, Bitcoin, and more.
-<img width="1464" alt="image" src="https://github.com/user-attachments/assets/a68837c5-70ac-4580-b24a-8b11c0f99a15" />
+![image](https://github.com/user-attachments/assets/054cf62a-b165-4bb3-bab0-2bf8f29d4232)
 
 
 ## Latest Release - v0.0.1 (Beta)
