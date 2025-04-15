@@ -2,6 +2,18 @@
 
 Blockchain hash search engine - instantly search through Ethereum, Bitcoin, and more.
 
+## Latest Release - v0.0.1 (Beta)
+
+> **Note**: This initial release only supports Fee Recipient search for Ethereum Mainnet, starting from current blocks.
+
+Key Features:
+- Real-time Fee Recipient search in new Ethereum blocks
+- Case-insensitive hex pattern matching
+- Partial address matching
+- Block metadata indexing
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
+
 ## Features
 
 - **Unified Blockchain Search**: Search across Ethereum, Bitcoin, and other blockchains
@@ -192,3 +204,63 @@ Access monitoring:
 ## License
 
 This project is licensed under the Apache 2.0 License - see the LICENSE file for details.
+
+# Changelog
+
+All notable changes to HexSearch will be documented in this file.
+
+## [0.0.1] - 2024-04-15
+
+Initial beta release of HexSearch focusing on Ethereum Mainnet Fee Recipient search.
+
+### Added
+- Fee Recipient search for Ethereum Mainnet
+  - Real-time indexing of new blocks
+  - Case-insensitive hex search
+  - Partial match support
+  - Block metadata indexing
+
+### Features
+- Search Interface
+  - Clean, minimalist UI
+  - Blockchain selector (Ethereum Mainnet)
+  - Real-time search results
+  - Copy-to-clipboard functionality
+
+- Backend Services
+  - ScyllaDB for high-performance storage
+  - Redis caching layer
+  - Ethereum node integration
+  - Microservices architecture
+
+### Limitations
+- Only supports Fee Recipient search
+- Indexing starts from current block height
+- No historical block data
+- Single blockchain support
+
+### Technical Details
+- Block Processing
+  - Real-time block indexing
+  - Fee Recipient address extraction
+  - Block metadata storage
+  - Cache management
+
+### Infrastructure
+- Docker support
+- Prometheus + Grafana monitoring
+- Basic rate limiting
+- Development environment with hot-reloading
+
+### Known Issues
+- Pagination delays with large results
+- Variable search response times
+- Limited RPC error handling
+
+### Upcoming
+- Bitcoin blockchain support
+- Historical block indexing
+- Additional Ethereum data types
+- Advanced search filters
+
+**Full Changelog**: https://github.com/jio-gl/hex-search/commits/v0.0.1
