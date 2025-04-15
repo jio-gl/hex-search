@@ -1,5 +1,8 @@
 # HexSearch System Architecture
 
+<img width="1255" alt="image" src="https://github.com/user-attachments/assets/3c6c22c5-8bbb-43b0-b5bc-78a4d00aa77b" />
+
+
 The project consists of three main components:
 
 1. **Frontend**: React-based UI deployed on GitHub Pages
